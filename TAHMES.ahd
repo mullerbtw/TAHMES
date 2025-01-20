@@ -1,0 +1,88 @@
+; Ismael Muller de Oliveira 00589254
+
+ORG 128
+
+msbA: DB ;parte mais significativa de A
+lsbA: DB ;parte menos significativa de A
+msbN: DB ;parte mais significativa de N
+lsbN: DB 0 ;parte menos significativa de N
+msbDiv: DB ;parte mais significativa do divisor
+lsbDiv: DB 1 ;parte menos significativa do divisor
+temp_msbA: DB ;parte temporária mais significativa de A
+temp_lsbA: DB ;parte temporária menos significativa de A
+dois: DB 2
+um: DB 1
+zero: DB 0
+
+
+ORG 0
+
+initialize:	LDA zero
+		STA lsbN ;inicializa lsb de N em zero
+		LDA zero
+		STA msbN ;inicializa msb de N em zero
+
+aloc_temp:	LDA msbA
+		STA temp_msbA ;aloca na variável temporária
+		LDA lsbA
+		STA temp_lsbA ;aloca na variavel temporária
+
+msbDiv_maior:	LDA temp_msbA
+		SUB msbDiv ;subtrai msb do corrente divisor
+		JB lsbDiv_maior ;caso msbDiv > temp_msbA, programa checa se lsbDiv > temp_lsbA
+		JMP check_lsb ;senão, vai para lsb's
+
+lsbDiv_maior:	LDA temp_lsbA
+		SUB lsbDiv ;subtrai msb do corrente divisor
+		JB end_op ;caso lsbDiv > temp_lsbA, programa vai aos ajustes finais
+
+check_lsb:	LDA temp_lsbA
+		SUB lsbDiv ;subtrai lsb do divisor
+		STA temp_lsbA ;aloca resultado na temporária lsb de A
+		JB borrow_lsb ;se temp_lsbA < lsbDiv, subtrai 1 de temp_msbA
+		JMP check_msb ;se temp_lsbA >= lsbDiv, então passar para msb's
+
+borrow_lsb:	LDA temp_msbA
+		SUB um ;compensa o borrow subtraindo um do temp_msbA
+		STA temp_msbA ;aloca resultado na temporária msb de A
+		JB next_div ;se temp_msbA ficar < 0, vai pra próximo divisor
+
+check_msb:	LDA temp_msbA
+		SUB msbDiv ;subtrai msb do divisor
+		STA temp_msbA ;aloca resultado na temporária msb de A
+		JB next_div ;se temp_msbA ficar < 0, vai pra próximo divisor
+
+check_lsb_zero:	LDA temp_lsbA ;carrega temporária de lsb de A
+		JZ check_msb_zero ;se temp_lsbA = 0; checamos se temp_msbA == 0
+		JMP check_lsb ;senão só voltamos pra checar lsb's de novo
+
+check_msb_zero:	LDA temp_msbA
+		JZ deu_certo ;se temp_msbA = 0, achamos divisor
+		JMP check_lsb ;senão só voltamos pra checar lsb's de novo
+
+deu_certo:	LDA lsbN
+		ADD um ; incrementa lsb do N em um
+		STA lsbN ;aloca incrementação no lsb do N
+
+next_div:	LDA lsbDiv ;carrega lsb do divisor
+		ADD um ;incrementa lsb do divisor em um
+		STA lsbDiv ;aloca incrementação no lsb do divisor
+		JC overf_lsbDiv ;se der carry no lsb do divisor, vai pra função
+		JMP aloc_temp ;senão, só volta pras alocações de temporárias
+
+overf_lsbDiv:	LDA msbDiv
+		ADD um ;incrementa msb do divisor em um pra compensar overflow
+		STA msbDiv ;aloca incrementação no msb do divisor
+		JMP aloc_temp ;volta pra alocações de temporárias
+
+end_op:		LDA um ;carrega um
+		STA lsbDiv ;aloca no lsb do divisor
+		LDA zero ;carrega zero
+		STA msbDiv ;aloca no msb do divisor
+		LDA zero ;carrega zero
+		STA temp_lsbA ;zera temporária de lsb do A
+		LDA zero ;carrega zero
+		STA temp_msbA ;zera temporária de msb do A
+		JMP halt ;pula pra linha de fim de programa
+
+halt:		HLT ;linha de fim de programa
